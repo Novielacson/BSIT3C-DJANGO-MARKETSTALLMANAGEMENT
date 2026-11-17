@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+    html, body {
+        overflow-x: hidden !important;
+    }
+    
+    .dashboard-wrapper {
+        width: 100% !important;
+        max-width: 1150px !important;
+        margin-left: -500px !important;
+        margin-right: auto !important;
+        margin-top: 40px !important;
+        float: none !important;
+        padding-top: 0px !important;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+</style>
+
+<div class="dashboard-wrapper">
+    <div class="container-fluid py-1">
+        <div class="row justify-content-center">
+            <div class="col-md-9 col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-0 overflow-hidden">
+                    <div class="bg-primary text-white px-3 py-3 d-flex align-items-center">
+                        <i class="bi bi-plus-circle me-2 fs-5"></i>
+                        <span class="fw-semibold">Add New Stall & Vendor</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <form method="POST">
+                            {% csrf_token %}
+                            
+                            <div class="alert alert-info py-2 small mb-3">
+                                Stall number will be generated automatically.
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="vendor_name" class="form-label fw-semibold text-dark">Assigned Vendor Name</label>
+                                <input type="text" name="vendor_name" id="vendor_name" class="form-control rounded-3" placeholder="e.g. Juan Dela Cruz" style="text-transform: uppercase;">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="category" class="form-label fw-semibold text-dark">Category</label>
+                                <select name="category" id="category" class="form-select rounded-3">
+                                     <option value="Dry Goods">Dry Goods</option>
+                                     <option value="Fruits & Vegetables">Fruits & Vegetables</option>
+                                    <option value="Wet Section (Fish/Meat)">Wet Section (Fish/Meat)</option>
+                                    <option value="Food & Beverages">Food & Beverages</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-dark">Rates Breakdown:</label>
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <label for="daily_rate" class="form-label text-muted small">Daily (₱)</label>
+                                        <input type="number" step="0.01" name="daily_rate" id="daily_rate" class="form-control rounded-3" value="{{ stall.daily_rate }}">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="weekly_rate" class="form-label text-muted small">Weekly (₱)</label>
+                                        <input type="number" step="0.01" name="weekly_rate" id="weekly_rate" class="form-control rounded-3" value="{{ stall.weekly_rate }}">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="monthly_rate" class="form-label text-muted small">Monthly (₱)</label>
+                                        <input type="number" step="0.01" name="monthly_rate" id="monthly_rate" class="form-control rounded-3" value="{{ stall.monthly_rate }}">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="yearly_rate" class="form-label text-muted small">Yearly (₱)</label>
+                                        <input type="number" step="0.01" name="yearly_rate" id="yearly_rate" class="form-control rounded-3" value="{{ stall.yearly_rate }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="rent_rate" class="form-label fw-semibold text-dark">Rent Rate (₱)</label>
+                                <input type="number" step="0.01" name="rent_rate" id="rent_rate" class="form-control rounded-3" placeholder="e.g. 1500.00">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="contact_number" class="form-label fw-semibold text-dark">Contact Number</label>
+                                <input type="text" name="contact_number" id="contact_number" class="form-control rounded-3" placeholder="e.g. 09123456789">
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-4">
+                                <a href="{% url 'stalls:stalls_vendors' %}" class="btn btn-outline-secondary rounded-pill px-3">Cancel</a>
+                                <button type="submit" class="btn btn-primary rounded-pill px-4">Save Stall</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dailyInput = document.getElementById('daily_rate');
+        const weeklyInput = document.getElementById('weekly_rate');
+        const monthlyInput = document.getElementById('monthly_rate');
+        const yearlyInput = document.getElementById('yearly_rate');
+
+        if (dailyInput) {
+            dailyInput.addEventListener('input', function () {
+                const dailyVal = parseFloat(dailyInput.value) || 0;
+                
+                // Automatiko nga pagkalkula
+                const weeklyVal = dailyVal * 7;
+                const monthlyVal = dailyVal * 30;
+                const yearlyVal = dailyVal * 365;
+
+                // I-butang ang kalkulado nga bili sa mga input (nga may 2 decimal places)
+                if (weeklyInput) weeklyInput.value = weeklyVal > 0 ? weeklyVal.toFixed(2) : '';
+                if (monthlyInput) monthlyInput.value = monthlyVal > 0 ? monthlyVal.toFixed(2) : '';
+                if (yearlyInput) yearlyInput.value = yearlyVal > 0 ? yearlyVal.toFixed(2) : '';
+            });
+        }
+    });
+</script>
+
+{% endblock %}

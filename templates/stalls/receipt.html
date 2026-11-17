@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .receipt-card { 
+        max-width: 550px; 
+        margin: 20px auto; 
+        background: #fff; 
+    }
+    @media print {
+        nav, header, footer, .sidebar, .no-print { 
+            display: none !important; 
+        }
+        body { 
+            background: #fff !important; 
+        }
+        .receipt-card { 
+            box-shadow: none !important; 
+            border: none !important;
+            margin: 0 !important; 
+            max-width: 100% !important; 
+        }
+    }
+</style>
+
+<div class="container py-4">
+    <div class="receipt-card p-4 border rounded shadow-sm">
+        <!-- Receipt Header -->
+        <div class="text-center border-bottom pb-3 mb-4">
+            <h4 class="fw-bold text-dark mb-1">MARKET STALL MANAGEMENT SYSTEM</h4>
+            <p class="text-muted small mb-0">Official Rental Payment Receipt</p>
+        </div>
+
+        <!-- Receipt Details -->
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Receipt Number:</span>
+            <span class="fw-bold text-dark">{{ payment.id }}</span>
+        </div>
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Transaction Date:</span>
+            <span class="fw-semibold text-dark">{{ payment.date_paid|date:"F d, Y" }}</span>
+        </div>
+
+        <!-- 🆕 Gindugang: Payment Method -->
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Payment Method:</span>
+            <span class="fw-semibold text-dark">{{ payment.payment_type|default:"Cash" }}</span>
+        </div>
+
+        <!-- 🆕 Gindugang: Reference Number (Kung GCash/Online) -->
+        {% if payment.reference_number %}
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Reference No.:</span>
+            <span class="fw-semibold text-dark">{{ payment.reference_number }}</span>
+        </div>
+        {% endif %}
+
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Stall Number:</span>
+            <span class="fw-bold text-dark">Stall #{{ payment.stall.stall_number }}</span>
+        </div>
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Vendor Name:</span>
+            <span class="fw-semibold text-dark">
+                {% if payment.stall.vendor_name %}
+                    {{ payment.stall.vendor_name }}
+                {% elif payment.stall.vendor %}
+                    {{ payment.stall.vendor }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </span>
+        </div>
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Amount Paid:</span>
+            <span class="fw-bold text-success">₱{{ payment.amount_paid }}</span>
+        </div>
+        <div class="mb-3 d-flex justify-content-between border-top pt-2">
+            <span class="text-muted">Next Due Date:</span>
+            <span class="fw-bold text-primary">{{ payment.stall.next_due_date|date:"F d, Y" }}</span>
+        </div>
+        <div class="mb-3 d-flex justify-content-between">
+            <span class="text-muted">Received By:</span>
+            <span class="fw-semibold text-dark">
+                {% if payment.received_by %}
+                    {{ payment.received_by.get_full_name|default:payment.received_by.username }}
+                {% else %}
+                    System Admin
+                {% endif %}
+            </span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-4 d-flex gap-2 no-print">
+            <button onclick="window.print()" class="btn btn-success w-100">Print Receipt</button>
+            <a href="{% url 'stalls:payments' %}" class="btn btn-secondary w-100">Back to Payments</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

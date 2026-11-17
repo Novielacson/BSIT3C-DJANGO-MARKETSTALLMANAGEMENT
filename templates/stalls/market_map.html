@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .page-wrap { max-width: 1060px; margin-left: auto; margin-right: auto; }
+    .map-card { display: flex; flex-direction: column; max-height: calc(100vh - 116px); }
+    .map-card > .card-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    .map-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    .map-canvas { background-color: var(--bs-tertiary-bg); min-width: 700px; height: 100%; display: flex; flex-direction: column; gap: .25rem; }
+    .map-right-col { min-width: 320px; }
+    .section-label { font-size: .6rem; letter-spacing: .05em; }
+    .stall-num { font-size: .7rem; font-weight: 700; line-height: 1.1; margin-bottom: .125rem; }
+    .stall-state { font-size: .55rem; font-weight: 700; line-height: 1; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .25rem; }
+    .stall-vendor { display: block; width: 100%; padding: 0 .2rem; font-size: .55rem; line-height: 1.1; font-weight: 600; color: var(--bs-success-text-emphasis); }
+    .stall-card {
+        position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        text-align: center; background-color: var(--bs-body-bg); min-width: 0; cursor: pointer; flex-shrink: 0;
+        border: 1px dashed var(--bs-border-color); border-top: 3px solid var(--bs-border-color);
+        border-radius: .5rem; padding: .25rem .2rem .2rem;
+        transition: transform .15s ease-in-out, box-shadow .15s ease-in-out, border-color .15s ease-in-out;
+    }
+    .stall-card.vacant { border-top-color: var(--bs-danger); }
+    .stall-card.vacant .stall-state { color: var(--bs-danger); }
+    .stall-card.occupied { border-style: solid; border-top-color: var(--bs-success); background-color: rgba(25, 135, 84, .06); }
+    .stall-card.occupied .stall-state { color: var(--bs-success); }
+    .stall-card:hover, .stall-card:focus-within { transform: translateY(-2px); box-shadow: 0 .375rem .75rem rgba(0, 0, 0, .12); z-index: 1; }
+    .stall-card.vacant:hover, .stall-card.vacant:focus-within { border-color: var(--bs-danger); }
+    .stall-card.occupied:hover, .stall-card.occupied:focus-within { border-color: var(--bs-success); }
+    .vertical-block { width: 60px; height: 84px; }
+    .small-square { width: 56px; height: 52px; }
+    .medium-square { width: 70px; height: 64px; }
+    .bottom-block { height: 56px; }
+    .top-vacant-horizontal { height: 52px; }
+    .open-space {
+        border: 1px dashed var(--bs-border-color); border-radius: .5rem; color: var(--bs-secondary-color);
+        background-image: repeating-linear-gradient(45deg, transparent 0, transparent 10px, rgba(108, 117, 125, .06) 10px, rgba(108, 117, 125, .06) 20px);
+    }
+    .zone-box {
+        border: 1px dashed var(--bs-border-color); border-radius: .5rem; background-color: var(--bs-body-bg);
+        color: var(--bs-secondary-color); display: flex; align-items: center; justify-content: center; text-align: center;
+        font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    }
+    .walkway {
+        border: 1px solid var(--bs-border-color); border-radius: .375rem; background-color: var(--bs-body-bg);
+        color: var(--bs-secondary-color); font-size: .6rem; font-weight: 600; text-transform: uppercase; letter-spacing: .12em;
+    }
+</style>
+
+<div class="container-fluid py-1">
+    <div class="page-wrap">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-1">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Market Stall Map</h1>
+            <p class="text-secondary mb-0">Building and floor plan layout of all market stalls</p>
+        </div>
+        <a href="{% url 'stalls:stalls_vendors' %}" class="btn btn-primary">
+            <i class="bi bi-grid-1x2 me-1"></i> Manage Stalls
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 map-card">
+        <div class="card-header bg-transparent border-0 pt-2 px-3 pb-1 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h5 class="fw-bold mb-0">Floor Plan Layout</h5>
+                <p class="text-secondary small mb-0">Hover a stall for details, click an occupied stall to view its vendor</p>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge rounded-pill bg-success-subtle text-success-emphasis px-2 py-1">
+                    <i class="bi bi-person-check me-1"></i>Occupied &middot; {{ occupied_count|default:"0" }}
+                </span>
+                <span class="badge rounded-pill bg-danger-subtle text-danger px-2 py-1">
+                    <i class="bi bi-door-open me-1"></i>Vacant &middot; {{ vacant_count|default:"0" }}
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-2">
+            <div class="map-scroll">
+                <div class="map-canvas border rounded-3 p-2">
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-box-seam me-1"></i> Dry Goods (21&ndash;24)</span>
+                        <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-apple me-1"></i> Fruit &amp; Vegetable (17&ndash;20)</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div class="d-flex gap-1">
+                            {% with s=stalls_dict.24 %}
+                            <div class="stall-card vertical-block {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #24 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#24</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% with s=stalls_dict.23 %}
+                            <div class="stall-card vertical-block {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #23 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#23</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% with s=stalls_dict.22 %}
+                            <div class="stall-card vertical-block {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #22 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#22</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% with s=stalls_dict.21 %}
+                            <div class="stall-card vertical-block {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #21 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#21</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                        </div>
+
+                        <div class="open-space top-vacant-horizontal flex-grow-1 mx-2 d-flex align-items-center justify-content-center fw-bold" style="font-size: .65rem; letter-spacing: .15em;">
+                            VACANT SPACE
+                        </div>
+
+                        <div class="d-flex gap-1 align-items-start">
+                            {% with s=stalls_dict.20 %}
+                            <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #20 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#20</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% with s=stalls_dict.19 %}
+                            <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #19 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#19</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% with s=stalls_dict.18 %}
+                            <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #18 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#18</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% with s=stalls_dict.17 %}
+                            <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Stall #17 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                <span class="stall-num">#17</span>
+                                <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                {% if s and s.vendor_name %}
+                                    <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                    <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <div class="walkway py-1 px-2 d-flex flex-column justify-content-center align-items-center flex-shrink-0" style="width: 62px; height: 40px;">
+                            <span style="writing-mode: vertical-rl; transform: rotate(180deg);">Main Entrance</span>
+                        </div>
+                        <div class="walkway text-center py-1 ms-2 flex-grow-1 d-flex align-items-center justify-content-center" style="height: 22px;">
+                            Main Hallway / Walkway
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex flex-column gap-1">
+                            <div>
+                                <div class="d-flex gap-2 mb-1">
+                                    <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-cup-hot-fill me-1"></i> Food &amp; Bev (13&ndash;11)</span>
+                                    <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-droplet-fill me-1"></i> Wet Section (10&ndash;8)</span>
+                                </div>
+                                <div class="d-flex gap-1 flex-nowrap">
+                                    {% with s=stalls_dict.13 %}
+                                    <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                         data-bs-toggle="tooltip" data-bs-placement="top"
+                                         title="Stall #13 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                        <span class="stall-num">#13</span>
+                                        <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                        {% if s and s.vendor_name %}
+                                            <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                            <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                    {% with s=stalls_dict.12 %}
+                                    <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                         data-bs-toggle="tooltip" data-bs-placement="top"
+                                         title="Stall #12 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                        <span class="stall-num">#12</span>
+                                        <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                        {% if s and s.vendor_name %}
+                                            <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                            <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                    {% with s=stalls_dict.11 %}
+                                    <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                         data-bs-toggle="tooltip" data-bs-placement="top"
+                                         title="Stall #11 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                        <span class="stall-num">#11</span>
+                                        <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                        {% if s and s.vendor_name %}
+                                            <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                            <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                    {% with s=stalls_dict.10 %}
+                                    <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                         data-bs-toggle="tooltip" data-bs-placement="top"
+                                         title="Stall #10 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                        <span class="stall-num">#10</span>
+                                        <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                        {% if s and s.vendor_name %}
+                                            <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                            <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                    {% with s=stalls_dict.9 %}
+                                    <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                         data-bs-toggle="tooltip" data-bs-placement="top"
+                                         title="Stall #9 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                        <span class="stall-num">#9</span>
+                                        <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                        {% if s and s.vendor_name %}
+                                            <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                            <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                    {% with s=stalls_dict.8 %}
+                                    <div class="stall-card small-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                         data-bs-toggle="tooltip" data-bs-placement="top"
+                                         title="Stall #8 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                        <span class="stall-num">#8</span>
+                                        <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                        {% if s and s.vendor_name %}
+                                            <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                            <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                </div>
+                            </div>
+
+                            <div class="zone-box w-100" style="height: 40px;">Private Property</div>
+                        </div>
+
+                        <div class="d-flex flex-column gap-1 ps-3 map-right-col">
+                            <div class="text-end">
+                                <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-apple me-1"></i> Fruit &amp; Veg (14&ndash;16)</span>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-1">
+                                {% with s=stalls_dict.16 %}
+                                <div class="stall-card medium-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                     data-bs-toggle="tooltip" data-bs-placement="top"
+                                     title="Stall #16 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                    <span class="stall-num">#16</span>
+                                    <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                    {% if s and s.vendor_name %}
+                                        <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                        <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                    {% endif %}
+                                </div>
+                                {% endwith %}
+                                {% with s=stalls_dict.15 %}
+                                <div class="stall-card medium-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                     data-bs-toggle="tooltip" data-bs-placement="top"
+                                     title="Stall #15 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                    <span class="stall-num">#15</span>
+                                    <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                    {% if s and s.vendor_name %}
+                                        <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                        <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                    {% endif %}
+                                </div>
+                                {% endwith %}
+                                {% with s=stalls_dict.14 %}
+                                <div class="stall-card medium-square {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                     data-bs-toggle="tooltip" data-bs-placement="top"
+                                     title="Stall #14 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                    <span class="stall-num">#14</span>
+                                    <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                    {% if s and s.vendor_name %}
+                                        <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                        <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                    {% endif %}
+                                </div>
+                                {% endwith %}
+                            </div>
+
+                            <div class="d-flex justify-content-end align-items-start gap-2">
+                                <div>
+                                    <div class="mb-1 text-center">
+                                        <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-apple"></i> Stall 2</span>
+                                    </div>
+                                    <div style="width: 78px;">
+                                        {% with s=stalls_dict.2 %}
+                                        <div class="stall-card w-100 py-1 {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                             data-bs-toggle="tooltip" data-bs-placement="top"
+                                             title="Stall #2 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                            <span class="stall-num">#2</span>
+                                            <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                            {% if s and s.vendor_name %}
+                                                <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                                <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                            {% endif %}
+                                        </div>
+                                        {% endwith %}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="mb-1 text-end">
+                                        <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-box-seam"></i> Dry Goods (Stall 1)</span>
+                                    </div>
+                                    <div style="width: 160px;">
+                                        {% with s=stalls_dict.1 %}
+                                        <div class="stall-card w-100 py-2 {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                                             data-bs-toggle="tooltip" data-bs-placement="top"
+                                             title="Stall #1 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                                            <span class="stall-num">#1</span>
+                                            <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                                            {% if s and s.vendor_name %}
+                                                <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                                <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                                            {% endif %}
+                                        </div>
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center border-top pt-1">
+                        <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-box-seam me-1"></i> Dry Goods Section (4&ndash;7)</span>
+                        <span class="section-label fw-bold text-uppercase text-secondary"><i class="bi bi-cup-hot-fill me-1"></i> Food &amp; Beverage (Stall 3)</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-2">
+                        {% with s=stalls_dict.7 %}
+                        <div class="stall-card bottom-block flex-grow-1 {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                             data-bs-toggle="tooltip" data-bs-placement="top"
+                             title="Stall #7 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                            <span class="stall-num">#7</span>
+                            <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                            {% if s and s.vendor_name %}
+                                <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% with s=stalls_dict.6 %}
+                        <div class="stall-card bottom-block flex-grow-1 {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                             data-bs-toggle="tooltip" data-bs-placement="top"
+                             title="Stall #6 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                            <span class="stall-num">#6</span>
+                            <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                            {% if s and s.vendor_name %}
+                                <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% with s=stalls_dict.5 %}
+                        <div class="stall-card bottom-block flex-grow-1 {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                             data-bs-toggle="tooltip" data-bs-placement="top"
+                             title="Stall #5 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                            <span class="stall-num">#5</span>
+                            <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                            {% if s and s.vendor_name %}
+                                <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% with s=stalls_dict.4 %}
+                        <div class="stall-card bottom-block flex-grow-1 {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                             data-bs-toggle="tooltip" data-bs-placement="top"
+                             title="Stall #4 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                            <span class="stall-num">#4</span>
+                            <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                            {% if s and s.vendor_name %}
+                                <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% with s=stalls_dict.3 %}
+                        <div class="stall-card bottom-block flex-grow-1 {% if s and s.vendor_name %}occupied{% else %}vacant{% endif %}"
+                             data-bs-toggle="tooltip" data-bs-placement="top"
+                             title="Stall #3 — {% if s and s.vendor_name %}{{ s.vendor_name }} (Occupied){% else %}Vacant{% endif %}">
+                            <span class="stall-num">#3</span>
+                            <span class="stall-state">{% if s and s.vendor_name %}Occupied{% else %}Vacant{% endif %}</span>
+                            {% if s and s.vendor_name %}
+                                <span class="stall-vendor text-truncate">{{ s.vendor_name }}</span>
+                                <a href="{% url 'stalls:vendor_detail' s.vendor_id %}" class="stretched-link" aria-label="View vendor {{ s.vendor_name }}"></a>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+{% endblock %}

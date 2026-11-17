@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid px-3 mt-0 pt-1">
+    <div style="width: 100%; max-width: 500px; margin: 0 auto;">
+        <div class="card shadow-sm border-0">
+            <!-- Blue Header -->
+            <div class="card-header bg-primary text-white py-3">
+                <h6 class="mb-0 fw-bold"> Register New Stall & Vendor</h6>
+            </div>
+            
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="alert alert-info py-2 small mb-3">
+                        Stall number will be generated automatically.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Assigned Vendor Name</label>
+                        <input type="text" name="vendor_name" class="form-control" placeholder="Enter vendor name" style="text-transform: uppercase;" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Category</label>
+                        <select name="category" class="form-select">
+                             <option value="Dry Goods">Dry Goods</option>
+                             <option value="Fruits & Vegetables">Fruits & Vegetables</option>
+                             <option value="Wet Section (Fish/Meat)">Wet Section (Fish/Meat)</option>
+                             <option value="Food & Beverages">Food & Beverages</option>
+                        </select>
+                    </div>
+
+                    <!-- Rates Breakdown Section -->
+                    <div class="mt-4 mb-3">
+                        <label class="form-label fw-bold text-secondary">Rates Breakdown:</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center align-middle mb-2">
+                                <thead class="table-light">
+                                    <tr class="text-muted small">
+                                        <th>Daily (₱)</th>
+                                        <th>Weekly (₱)</th>
+                                        <th>Monthly (₱)</th>
+                                        <th>Yearly (₱)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><input type="number" step="0.01" name="daily_rate" id="daily_rate" class="form-control text-center" placeholder="" oninput="calculateRates()" required></td>
+                                        <td><input type="text" id="weekly_rate" class="form-control text-center bg-white" readonly value=""></td>
+                                        <td><input type="text" id="monthly_rate" class="form-control text-center bg-white" readonly value=""></td>
+                                        <td><input type="text" id="yearly_rate" class="form-control text-center bg-white" readonly value=""></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Rent Rate (₱) <span class="text-muted fw-normal"></span></label>
+                        <input type="number" step="0.01" name="daily_rate_mirror" id="daily_rate_mirror" class="form-control" placeholder="210" readonly>
+                    </div>
+
+                   
+
+                     <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text" name="phone_number" class="form-control" placeholder="09XXXXXXXXX" required>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'stalls:stalls_vendors' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Registration</button>
+                    </div>
+
+                   
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+                    
+
+<script>
+function calculateRates() {
+    let daily = parseFloat(document.getElementById('daily_rate').value) || 0;
+    let weekly = daily * 7;
+    let monthly = daily * 30;
+    let yearly = daily * 365;
+
+    document.getElementById('weekly_rate').value = weekly.toFixed(2);
+    document.getElementById('monthly_rate').value = monthly.toFixed(2);
+    document.getElementById('yearly_rate').value = yearly.toFixed(2);
+    document.getElementById('daily_rate_mirror').value = daily.toFixed(2);
+}
+</script>
+{% endblock %}

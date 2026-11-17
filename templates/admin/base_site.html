@@ -1,0 +1,149 @@
+{% extends "admin/base.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    /* Global Dark Theme Base */
+    :root {
+        --body-bg: #12161f;
+        --body-fg: #e9ecef;
+        --primary: #38bdf8;
+    }
+
+    body {
+        background-color: #12161f !important;
+        color: #e9ecef !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    #container {
+        background-color: #12161f !important;
+    }
+
+    /* Top Header Bar */
+    #header {
+        background-color: #1a1f2c !important;
+        color: #fff !important;
+        border-bottom: 1px solid #2a303c !important;
+        padding: 12px 20px;
+    }
+
+    .breadcrumbs {
+        background-color: #1a1f2c !important;
+        color: #94a3b8 !important;
+        border-bottom: 1px solid #2a303c !important;
+        padding: 10px 20px;
+    }
+
+    /* Paghimo sang Sidebar nga kapareho gid sang Dashboard mo */
+    #nav-sidebar {
+        background-color: #1a1f2c !important;
+        border-right: 1px solid #2a303c !important;
+    }
+
+    #nav-sidebar .module {
+        background-color: #1a1f2c !important;
+        border-bottom: 1px solid #2a303c !important;
+    }
+
+    #nav-sidebar th, #nav-sidebar caption {
+        color: #38bdf8 !important;
+    }
+
+    #nav-sidebar a {
+        color: #94a3b8 !important;
+    }
+
+    #nav-sidebar a:hover, #nav-sidebar .current-app a {
+        color: #fff !important;
+        background-color: #2a3447 !important;
+    }
+
+    /* Main Content kag Tables */
+    #content {
+        background-color: #12161f !important;
+        padding: 25px !important;
+    }
+
+    .results {
+        background-color: #1a1f2c !important;
+        border-radius: 12px !important;
+        border: 1px solid #2a303c !important;
+        overflow: hidden;
+    }
+
+    table {
+        width: 100% !important;
+        background-color: #1a1f2c !important;
+        color: #fff !important;
+    }
+
+    thead th {
+        background-color: #1d2433 !important;
+        color: #38bdf8 !important;
+        border-bottom: 1px solid #2a303c !important;
+        padding: 12px !important;
+    }
+
+    tbody tr {
+        background-color: #1a1f2c !important;
+        border-bottom: 1px solid #2a303c !important;
+    }
+
+    tbody tr:hover {
+        background-color: #222b3b !important;
+    }
+
+    tbody td {
+        padding: 12px !important;
+        color: #e9ecef !important;
+    }
+
+    /* Filter Sidebar sa tuo/wala kung diin Makita ang Filters */
+    #changelist-filter {
+        background-color: #1a1f2c !important;
+        border: 1px solid #2a303c !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+    }
+
+    #changelist-filter h2, #changelist-filter h3 {
+        color: #38bdf8 !important;
+    }
+
+    #changelist-filter a {
+        color: #94a3b8 !important;
+    }
+
+    #changelist-filter a:hover, #changelist-filter li.selected a {
+        color: #fff !important;
+        background-color: #2a3447 !important;
+    }
+
+    /* Search bar kag Action Buttons */
+    #changelist-search {
+        background-color: #1a1f2c !important;
+        border: 1px solid #2a303c !important;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    #searchbar {
+        background-color: #222b3b !important;
+        color: #fff !important;
+        border: 1px solid #3a445d !important;
+        border-radius: 6px;
+        padding: 8px 12px;
+    }
+
+    .button, input[type="submit"], .submit-row input {
+        background-color: #38bdf8 !important;
+        color: #000 !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        border: none !important;
+        padding: 8px 16px !important;
+    }
+</style>
+{% endblock %}

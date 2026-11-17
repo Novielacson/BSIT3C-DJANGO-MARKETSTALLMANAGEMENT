@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .settings-icon { width: 38px; height: 38px; border-radius: .65rem; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .form-label-upper { font-size: .72rem; letter-spacing: .06em; }
+    .form-check-input { cursor: pointer; }
+    .market-config .form-label { margin-bottom: .2rem; }
+    .market-config .form-control,
+    .market-config .form-select { padding-top: .35rem; padding-bottom: .35rem; font-size: .9rem; }
+    .market-config textarea.form-control { padding-bottom: 0; }
+</style>
+
+<div class="container-fluid py-2">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">System Settings</h1>
+            <p class="text-secondary mb-0">Manage market configuration, notifications, and data backups</p>
+        </div>
+        <a href="{% url 'stalls:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center gap-2 mb-2" role="alert">
+                    <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'warning' %}exclamation-triangle-fill{% elif message.tags == 'error' %}exclamation-octagon-fill{% else %}info-circle-fill{% endif %}"></i>
+                    <div class="minw-0">{{ message }}</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'stalls:settings' %}">
+        {% csrf_token %}
+        <div class="row g-3 g-md-4 mb-3 mb-md-4">
+            <div class="col-md-7">
+                <div class="card border-0 shadow-sm rounded-4 h-100 market-config">
+                    <div class="card-header bg-transparent border-0 pt-2 px-3 px-md-4 pb-1">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-shop me-2 text-primary"></i>Market Configuration</h5>
+                        <p class="text-secondary small mb-0">Market identity and currency used across the system</p>
+                    </div>
+                    <div class="card-body px-3 px-md-4 pt-1 pb-0">
+                        <div class="row g-2">
+                            <div class="col-md-7">
+                                <label for="market_name" class="form-label form-label-upper text-secondary fw-semibold text-uppercase">Market Name</label>
+                                <input type="text" id="market_name" name="market_name" value="{{ setting.market_name }}" class="form-control" placeholder="e.g. Salong Public Market" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="default_currency" class="form-label form-label-upper text-secondary fw-semibold text-uppercase">Default Currency</label>
+                                <select id="default_currency" name="default_currency" class="form-select">
+                                    <option value="PHP" {% if setting.default_currency == 'PHP' %}selected{% endif %}>PHP — Philippine Peso (₱)</option>
+                                    <option value="USD" {% if setting.default_currency == 'USD' %}selected{% endif %}>USD — US Dollar ($)</option>
+                                    <option value="EUR" {% if setting.default_currency == 'EUR' %}selected{% endif %}>EUR — Euro (€)</option>
+                                    <option value="GBP" {% if setting.default_currency == 'GBP' %}selected{% endif %}>GBP — Pound Sterling (£)</option>
+                                    <option value="JPY" {% if setting.default_currency == 'JPY' %}selected{% endif %}>JPY — Japanese Yen (¥)</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="market_address" class="form-label form-label-upper text-secondary fw-semibold text-uppercase">Market Address</label>
+                                <textarea id="market_address" name="market_address" rows="1" class="form-control" placeholder="Street, Barangay, City/Municipality">{{ setting.market_address }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 px-3 px-md-4 pb-2 pt-0 mt-0">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-check2-circle me-1"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-2">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-bell me-2 text-warning"></i>Notification Preferences</h5>
+                        <p class="text-secondary small mb-0">Choose which alerts the system should send</p>
+                    </div>
+                    <div class="card-body px-3 px-md-4 pt-1 pb-3 d-flex flex-column">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="email_notifications" name="email_notifications" {% if setting.email_notifications %}checked{% endif %}>
+                            <label class="form-check-label" for="email_notifications">
+                                <span class="fw-semibold d-block">Email Notifications</span>
+                                <span class="small text-secondary">Receive summaries of payments and stall activity.</span>
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="payment_reminders" name="payment_reminders" {% if setting.payment_reminders %}checked{% endif %}>
+                            <label class="form-check-label" for="payment_reminders">
+                                <span class="fw-semibold d-block">Payment Reminders</span>
+                                <span class="small text-secondary">Get alerted when rent is due or overdue.</span>
+                            </label>
+                        </div>
+                        <div class="alert alert-light border rounded-3 small mb-0 mt-auto">
+                            <i class="bi bi-info-circle text-primary me-1"></i> Preferences apply to the administrator account.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="row g-3 g-md-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-2">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-database me-2 text-primary"></i>Data Backup &amp; Export</h5>
+                    <p class="text-secondary small mb-0">Download your market records for safekeeping</p>
+                </div>
+                <div class="card-body px-3 px-md-4 pt-1 pb-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-3 h-100 d-flex flex-column">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="settings-icon bg-success-subtle text-success-emphasis"><i class="bi bi-filetype-csv"></i></span>
+                                    <h6 class="fw-bold mb-0">Stall Export</h6>
+                                </div>
+                                <p class="small text-secondary flex-grow-1">All stalls with vendor, category, contact, and rent details as a spreadsheet.</p>
+                                <a href="{% url 'stalls:settings' %}?export=csv" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-download me-1"></i> Download CSV
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-3 h-100 d-flex flex-column">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="settings-icon bg-primary-subtle text-primary-emphasis"><i class="bi bi-filetype-json"></i></span>
+                                    <h6 class="fw-bold mb-0">Full Backup</h6>
+                                </div>
+                                <p class="small text-secondary flex-grow-1">Complete JSON snapshot of system settings and every stall record.</p>
+                                <a href="{% url 'stalls:settings' %}?export=backup" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-download me-1"></i> Download Backup
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-2">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-shield-lock me-2 text-danger"></i>Account Session</h5>
+                    <p class="text-secondary small mb-0">Secure your administrator account</p>
+                </div>
+                <div class="card-body px-3 px-md-4 pt-1 pb-3 d-flex flex-column">
+                    <p class="small text-secondary">Securely sign out of your administrator account to protect market data.</p>
+                    <form method="post" action="/logout/" class="mt-auto">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

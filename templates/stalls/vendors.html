@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vendor Management - Market Stall</title>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+        h1 { color: #ffffff; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .vendor-item { background: #2a2a2a; margin: 10px 0; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; }
+        .back-link { display: inline-block; margin-top: 20px; color: #bb86fc; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vendor Directory</h1>
+        <div>
+            <div class="vendor-item">
+                <div>
+                    <strong>Sample Vendor</strong>
+                    <div style="font-size: 0.9em; color: #a0a0a0;">Assigned Stall: #1</div>
+                </div>
+            </div>
+        </div>
+        <a href="{% url 'stalls:dashboard' %}" class="back-link">&larr; Back to Dashboard</a>
+    </div>
+</body>
+</html>

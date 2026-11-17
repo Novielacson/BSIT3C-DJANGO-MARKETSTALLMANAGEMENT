@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark mb-1">Help & Support Center</h2>
+        <p class="text-muted small">Guides, Frequently Asked Questions, and System Support</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- FAQ Accordion -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-3 p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-question-circle text-primary me-2"></i>Frequently Asked Questions</h5>
+                
+                <div class="accordion accordion-flush" id="faqAccordion">
+                    <!-- FAQ 1 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                How do I assign a vendor to a vacant stall?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                Go to the <strong>Stalls & Vendors</strong> page, select an available stall, and update its details by selecting an existing vendor or assigning a new vendor name.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FAQ 2 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                How is stall status updated in the Market Map?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                The status updates automatically in real-time. If a stall has <code>is_occupied = True</code>, it displays as <span class="badge bg-success">Occupied</span> (Green). Otherwise, it shows as <span class="badge bg-warning text-dark">Vacant</span> (Yellow).
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FAQ 3 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                How do I process monthly rent payments?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                Navigate to the <strong>Payments & Rent</strong> module, search for the vendor or stall number, click the pay button, and enter the amount paid to generate a record.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact & System Info Card -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-headset text-primary me-2"></i>Technical Support</h5>
+                <p class="text-muted small">If you encounter system errors or need system configuration changes, contact your IT administrator.</p>
+                <hr class="my-3">
+                <div class="small text-muted">
+                    <p class="mb-1"><strong>System Version:</strong> v1.0.0</p>
+                    <p class="mb-1"><strong>Framework:</strong> Django 6.1 / Bootstrap 5</p>
+                    <p class="mb-0"><strong>Database:</strong> MySQL / phpMyAdmin</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

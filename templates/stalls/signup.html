@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Admin Signup</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eef4ff 0%, #f8f9fa 45%, #eef7f1 100%);
+        }
+        .signup-shell { min-height: 100vh; }
+        .signup-card { width: 100%; max-width: 420px; }
+        .brand-badge {
+            width: 46px; height: 46px; border-radius: .85rem;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 1.25rem;
+        }
+        .input-group .input-group-text { background-color: var(--bs-tertiary-bg); border-right: 0; }
+        .input-group > .form-control { border-left: 0; }
+        .input-group > .form-select { border-left: 0; }
+        .input-group > .btn { border-left: 0; }
+        .form-control:focus { box-shadow: none; }
+        .signup-card .form-control,
+        .signup-card .form-select,
+        .signup-card .input-group-text { padding-top: .4rem; padding-bottom: .4rem; font-size: .95rem; }
+        .form-text { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="signup-shell d-flex align-items-center justify-content-center p-3">
+    <div class="card signup-card border-0 shadow-lg rounded-4">
+        <div class="card-body p-3 p-sm-4">
+
+            <div class="text-center mb-3">
+                <span class="brand-badge bg-primary-subtle text-primary-emphasis mb-2">
+                    <i class="bi bi-person-plus"></i>
+                </span>
+                <h1 class="h5 fw-bold mb-1">Create Your Account</h1>
+                <p class="text-secondary small mb-0">Register to manage your market stalls</p>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger d-flex align-items-center gap-2 small py-2 px-3 rounded-3 mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <div>{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+                    </div>
+                {% endif %}
+
+                {% for field in form %}
+                <div class="mb-2">
+                    <label for="{{ field.id_for_label }}" class="form-label small fw-semibold">{{ field.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            {% if field.name == 'username' %}
+                                <i class="bi bi-person text-secondary"></i>
+                            {% elif field.name == 'email' %}
+                                <i class="bi bi-envelope text-secondary"></i>
+                            {% elif field.name == 'role' %}
+                                <i class="bi bi-person-badge text-secondary"></i>
+                            {% else %}
+                                <i class="bi bi-lock text-secondary"></i>
+                            {% endif %}
+                        </span>
+                        {{ field }}
+                        {% if 'password' in field.name %}
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePassword('{{ field.id_for_label }}', this)" aria-label="Show password">
+                                <i class="bi bi-eye-slash"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                    {% for error in field.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                    {% if field.help_text %}
+                        <div class="form-text small">{{ field.help_text }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-3 mt-1">
+                    <i class="bi bi-person-plus me-1"></i> Create Account
+                </button>
+            </form>
+
+            <p class="text-center small text-secondary mt-3 mb-0">
+                Already have an account? <a href="{% url 'stalls:login' %}" class="text-decoration-none fw-semibold">Log in</a>
+            </p>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword(fieldId, btn) {
+        const passwordField = document.getElementById(fieldId);
+        const icon = btn.querySelector('i');
+
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        } else {
+            passwordField.type = 'password';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        }
+    }
+</script>
+
+</body>
+</html>

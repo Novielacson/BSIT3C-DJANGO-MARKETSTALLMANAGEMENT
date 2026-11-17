@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .report-page { max-width: 1400px; margin: 0 auto; }
+    .report-card { overflow: hidden; }
+    .report-summary th { font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; }
+    .report-summary td { font-size: .95rem; }
+    .report-directory { font-size: .85rem; }
+    .report-directory th { font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+    .report-directory td { vertical-align: middle; }
+    .signature-line { border-bottom: 1px solid #212529; height: 34px; }
+    .print-only { display: none; }
+
+    @media print {
+        @page { size: A4 portrait; margin: 12mm; }
+        body { background: #fff !important; color: #000 !important; }
+        nav, header, footer, aside, .sidebar, .navbar, .topbar, .app-sidebar, .no-print { display: none !important; }
+        main, .main-content, .content-wrapper, .container-fluid { margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+        .print-only { display: block !important; }
+        .report-card { border: 0 !important; box-shadow: none !important; }
+        .report-card .card-header { border-bottom: 1px solid #dee2e6 !important; }
+        .table-responsive { overflow: visible !important; }
+        .report-summary, .report-directory { font-size: 9.5pt; }
+        .report-summary th, .report-directory th { font-size: 8pt; padding: .3rem .35rem; }
+        .report-summary td, .report-directory td { padding: .3rem .35rem; }
+        .badge { border: 1px solid #adb5bd !important; color: #000 !important; background: transparent !important; }
+        a[href]:after { content: "" !important; }
+        tr { page-break-inside: avoid; }
+    }
+</style>
+
+<div class="container-fluid py-2 report-page">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 no-print">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Daily Collection &amp; Occupancy Report</h1>
+            <p class="text-secondary mb-0">Date-isolated collections, stall occupancy, and archived daily reports</p>
+        </div>
+        <a href="{% url 'stalls:dashboard' %}" class="btn btn-primary">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-3 no-print">
+        <div class="card-body p-3">
+            <form method="get" id="reportFilterForm" class="d-none"></form>
+            <form method="post" id="saveReportForm" action="{% url 'stalls:reports' %}" class="d-none">
+                {% csrf_token %}
+                <input type="hidden" name="report_date" value="{{ selected_date|date:'Y-m-d' }}">
+                <input type="hidden" name="action" value="save_report">
+            </form>
+
+            <div class="d-flex align-items-center justify-content-between flex-nowrap gap-2">
+                <input form="reportFilterForm" type="date" id="reportDate" name="date" class="form-control form-control-sm text-nowrap" value="{{ selected_date|date:'Y-m-d' }}" aria-label="Report Date" style="width: 160px;">
+                <a href="{% url 'stalls:reports' %}" class="btn btn-sm btn-outline-secondary text-nowrap">Today</a>
+                <button form="reportFilterForm" type="submit" class="btn btn-sm btn-primary text-nowrap">
+                    <i class="bi bi-search me-1"></i> View Report
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-bs-toggle="modal" data-bs-target="#savedReportsArchiveModal">
+                    <i class="bi bi-archive me-1"></i> Saved Daily Reports Archive
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Print Report
+                </button>
+                <button form="saveReportForm" type="submit" class="btn btn-sm btn-success text-nowrap">
+                    <i class="bi bi-printer me-1"></i>
+                    {% if is_today %}Save &amp; Print Today's Report{% else %}Save &amp; Print Report{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="print-only text-center mb-4">
+        <div class="small text-uppercase">Republic of the Philippines</div>
+        <div class="fw-bold" style="font-size: 1.05rem;">OFFICE OF THE CITY TREASURER</div>
+        <div class="fw-semibold">{{ market_name }}</div>
+        <h4 class="fw-bold mt-3 mb-1">DAILY COLLECTION &amp; OCCUPANCY REPORT</h4>
+        <div>Report Date: <strong>{{ selected_date|date:"F d, Y" }}</strong></div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2 no-print">
+        <div>
+            <h2 class="h5 fw-bold mb-0">Daily Collection &amp; Occupancy</h2>
+            <div class="text-secondary small">
+                Report date: <strong>{{ selected_date|date:"F d, Y" }}</strong>
+                {% if archive %}
+                    &middot; Archived snapshot saved {{ archive.created_at|date:"M d, Y h:i A" }}
+                {% endif %}
+            </div>
+        </div>
+        <span class="badge rounded-pill text-bg-light border">
+            {{ payments|length }} payment{{ payments|length|pluralize }}
+        </span>
+    </div>
+
+    <div class="card report-card border-0 shadow-sm rounded-4 mb-3">
+        <div class="card-body p-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <h3 class="h6 fw-bold mb-0">Daily Summary</h3>
+                <span class="small text-secondary">{{ selected_date|date:"F d, Y" }}</span>
+            </div>
+            <table class="table table-bordered report-summary mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Total Collected</th>
+                        <th>Occupied Stalls</th>
+                        <th>Vacant Stalls</th>
+                        <th>Total Stalls</th>
+                        <th>Paid Stalls</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-bold text-success">₱{{ total_collected|floatformat:2 }}</td>
+                        <td class="fw-semibold">{{ occupied_stalls }}</td>
+                        <td class="fw-semibold">{{ vacant_stalls }}</td>
+                        <td class="fw-semibold">{{ total_stalls }}</td>
+                        <td class="fw-semibold">{{ paid_stalls_count }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card report-card border-0 shadow-sm rounded-4 mb-3">
+        <div class="card-header bg-white border-bottom py-2 px-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 class="h6 fw-bold mb-0">Stall &amp; Payment Directory</h3>
+                <span class="small text-secondary">Payments recorded for {{ selected_date|date:"F d, Y" }}</span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered table-hover report-directory mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Stall No.</th>
+                        <th>Vendor Name</th>
+                        <th>Payment Date</th>
+                        <th>Amount Paid</th>
+                        <th>Payment Method</th>
+                        <th>Reference No.</th>
+                        <th>Received By</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in stall_rows %}
+                    <tr>
+                        <td class="fw-semibold">#{{ row.stall.stall_number }}</td>
+                        <td>
+                            {% if row.stall.vendor_name %}
+                                {{ row.stall.vendor_name }}
+                            {% elif row.stall.vendor %}
+                                {{ row.stall.vendor }}
+                            {% else %}
+                                <span class="text-secondary fst-italic">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        {% if row.payment %}
+                            <td>{{ row.payment.date_paid|date:"M d, Y" }}</td>
+                            <td class="fw-semibold">₱{{ row.payment.amount_paid|floatformat:2 }}</td>
+                            <td>{{ row.payment.payment_type|default:"—" }}</td>
+                            <td>{{ row.payment.reference_number|default:"—" }}</td>
+                            <td>
+                                {% if row.payment.received_by %}
+                                    {{ row.payment.received_by.get_full_name|default:row.payment.received_by.username }}
+                                {% else %}
+                                    System Admin
+                                {% endif %}
+                            </td>
+                            <td><span class="badge rounded-pill bg-success-subtle text-success-emphasis">Paid</span></td>
+                        {% else %}
+                            <td>—</td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>
+                                {% if row.stall.vendor_name or row.stall.vendor %}
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis">Unpaid</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-light text-secondary border">Vacant</span>
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No stall records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="print-only mt-5">
+        <div class="row g-4">
+            <div class="col-4">
+                <div class="small">Prepared by:</div>
+                <div class="signature-line mt-4"></div>
+                <div class="small mt-1 text-muted">Market Administrator</div>
+                <div class="small text-muted">Brgy. Salong Public Market</div>
+            </div>
+            <div class="col-4">
+                <div class="small">Certified Correct:</div>
+                <div class="signature-line mt-4"></div>
+                <div class="small mt-1 text-muted">Market Manager / Head</div>
+                <div class="small text-muted">Brgy. Salong Public Market</div>
+            </div>
+            <div class="col-4">
+                <div class="small">Received by:</div>
+                <div class="signature-line mt-4"></div>
+                <div class="small mt-1 text-muted">Signature over Printed Name</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal fade no-print" id="savedReportsArchiveModal" tabindex="-1" aria-labelledby="savedReportsArchiveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="savedReportsArchiveModalLabel">Saved Daily Reports Archive</h5>
+                <span class="badge rounded-pill text-bg-light border ms-2">{{ archives|length }} saved</span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Report Date</th>
+                                <th>Total Collected</th>
+                                <th>Occupied</th>
+                                <th>Vacant</th>
+                                <th>Generated By</th>
+                                <th>Saved At</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in archives %}
+                            <tr>
+                                <td class="fw-semibold">{{ item.report_date|date:"M d, Y" }}</td>
+                                <td>₱{{ item.total_collected|floatformat:2 }}</td>
+                                <td>{{ item.occupied_stalls }}</td>
+                                <td>{{ item.vacant_stalls }}</td>
+                                <td>
+                                    {% if item.generated_by %}
+                                        {{ item.generated_by.get_full_name|default:item.generated_by.username }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.created_at|date:"M d, Y h:i A" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'stalls:reports' %}?date={{ item.report_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye me-1"></i> View / Reprint
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">No saved daily reports yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if auto_print %}
+<script>
+    window.addEventListener('load', function () {
+        window.setTimeout(function () { window.print(); }, 250);
+    });
+</script>
+{% endif %}
+
+{% endblock %}

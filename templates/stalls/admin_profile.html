@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .profile-avatar {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.1rem;
+        font-weight: 700;
+        user-select: none;
+    }
+    .form-label-upper {
+        font-size: .72rem;
+        letter-spacing: .06em;
+    }
+    .activity-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: .65rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .minw-0 { min-width: 0; }
+    .input-group-text { background-color: var(--bs-tertiary-bg); }
+    .input-group:focus-within .input-group-text {
+        border-color: var(--bs-primary);
+        color: var(--bs-primary);
+    }
+    .input-group:focus-within .input-group-text i { color: var(--bs-primary) !important; }
+</style>
+
+<div class="container-fluid py-2">
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Admin Profile</h1>
+            <p class="text-secondary mb-0">Manage your account details and security settings</p>
+        </div>
+        <a href="{% url 'stalls:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show d-flex align-items-center gap-2 rounded-3 mb-2" role="alert">
+            <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'error' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
+            <div class="minw-0">{{ message }}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-3 g-md-4">
+
+        <div class="col-lg-4 order-lg-2">
+
+            <div class="card border-0 shadow-sm rounded-4 mb-3 mb-md-4">
+                <div class="card-body p-4 text-center">
+                    <div class="profile-avatar bg-primary-subtle text-primary-emphasis mx-auto mb-3">
+                        {{ request.user.username|slice:":1"|upper }}
+                    </div>
+                    <h5 class="fw-bold mb-1">{{ request.user.username }}</h5>
+                    <p class="text-secondary small mb-3">{{ request.user.email|default:"No email set" }}</p>
+                    <div class="d-flex justify-content-center flex-wrap gap-2">
+                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis px-3 py-2">
+                            <i class="bi bi-shield-check me-1"></i>{{ user_role_label }}
+                        </span>
+                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis px-3 py-2">
+                            <i class="bi bi-circle-fill me-1" style="font-size:.45rem; vertical-align:middle;"></i>Active
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body border-top p-3">
+                    <div class="d-flex align-items-center gap-2 mb-2 small">
+                        <i class="bi bi-calendar3 text-secondary"></i>
+                        <span class="text-secondary">Joined</span>
+                        <span class="ms-auto fw-semibold">{{ request.user.date_joined|date:"M. d, Y" }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small">
+                        <i class="bi bi-clock-history text-secondary"></i>
+                        <span class="text-secondary">Last login</span>
+                        <span class="ms-auto fw-semibold">{{ request.user.last_login|date:"M. d, Y"|default:"—" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-3 mb-md-4">
+                <div class="card-header bg-transparent border-0 pt-3 px-3 pb-2">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-activity me-1 text-primary"></i>Recent Activity</h6>
+                    <p class="text-secondary small mb-0">Latest payment transactions</p>
+                </div>
+                <div class="card-body p-3 pt-1">
+                    {% for payment in recent_payments %}
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="activity-icon bg-success-subtle text-success-emphasis"><i class="bi bi-cash-coin"></i></span>
+                        <div class="minw-0">
+                            <div class="small fw-semibold text-truncate">Payment for Stall #{{ payment.stall.stall_number }}</div>
+                            <div class="text-secondary" style="font-size:.72rem;">{{ payment.payment_type }} &middot; {{ payment.date_paid|date:"M. d, Y" }}</div>
+                        </div>
+                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis ms-auto">&#8369;{{ payment.amount_paid|floatformat:2 }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-secondary small mb-0 text-center py-2">No recent transactions.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between gap-2">
+                    <div>
+                        <div class="fw-semibold small text-danger">Account Session</div>
+                        <div class="text-secondary" style="font-size:.72rem;">Sign out of your active session</div>
+                    </div>
+                    <form method="post" action="{% url 'stalls:logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm fw-semibold">
+                            <i class="bi bi-box-arrow-right me-1"></i>Log Out
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 order-lg-1">
+
+            <div class="card border-0 shadow-sm rounded-4 mb-3 mb-md-4">
+                <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-2">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-person-gear me-2 text-primary"></i>Profile Details</h5>
+                    <p class="text-secondary small mb-0">Update your personal account information</p>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="profile">
+                    <div class="card-body px-3 px-md-4 pt-1">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label form-label-upper text-secondary fw-semibold">First Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-person text-secondary"></i></span>
+                                    <input type="text" id="first_name" name="first_name" value="{{ request.user.first_name }}" class="form-control border-start-0" placeholder="Enter first name">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label form-label-upper text-secondary fw-semibold">Last Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-person text-secondary"></i></span>
+                                    <input type="text" id="last_name" name="last_name" value="{{ request.user.last_name }}" class="form-control border-start-0" placeholder="Enter last name">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label form-label-upper text-secondary fw-semibold">Email Address</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-envelope text-secondary"></i></span>
+                                    <input type="email" id="email" name="email" value="{{ request.user.email }}" class="form-control border-start-0" placeholder="name@example.com">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="username" class="form-label form-label-upper text-secondary fw-semibold">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-at text-secondary"></i></span>
+                                    <input type="text" id="username" value="{{ request.user.username }}" class="form-control border-start-0 bg-body-tertiary" readonly>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label for="role" class="form-label form-label-upper text-secondary fw-semibold">Account Role</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-person-badge text-secondary"></i></span>
+                                    <select id="role" name="role" class="form-select border-start-0" {% if not can_manage_role %}disabled{% endif %}>
+                                        {% for value, label in profile.ROLE_CHOICES %}
+                                        <option value="{{ value }}" {% if profile.role == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% if not can_manage_role %}
+                                <div class="form-text small">Only Superusers can change account roles.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 px-3 px-md-4 pb-3 pt-1">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-check2-circle me-1"></i>Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-transparent border-0 pt-3 px-3 px-md-4 pb-2">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-shield-lock me-2 text-primary"></i>Change Password</h5>
+                    <p class="text-secondary small mb-0">Keep your administrator account secure</p>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="password">
+                    <div class="card-body px-3 px-md-4 pt-1">
+                        {% if password_form.non_field_errors %}
+                        <div class="alert alert-danger rounded-3 small py-2">
+                            {% for error in password_form.non_field_errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="id_old_password" class="form-label form-label-upper text-secondary fw-semibold">Current Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-shield-lock text-secondary"></i></span>
+                                    <input type="password" name="old_password" id="id_old_password" class="form-control border-start-0" autocomplete="current-password" placeholder="Enter current password" required>
+                                </div>
+                                {% for error in password_form.old_password.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_new_password1" class="form-label form-label-upper text-secondary fw-semibold">New Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-key text-secondary"></i></span>
+                                    <input type="password" name="new_password1" id="id_new_password1" class="form-control border-start-0" autocomplete="new-password" placeholder="Enter new password" required>
+                                </div>
+                                {% for error in password_form.new_password1.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_new_password2" class="form-label form-label-upper text-secondary fw-semibold">Confirm New Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-end-0"><i class="bi bi-key-fill text-secondary"></i></span>
+                                    <input type="password" name="new_password2" id="id_new_password2" class="form-control border-start-0" autocomplete="new-password" placeholder="Confirm new password" required>
+                                </div>
+                                {% for error in password_form.new_password2.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="alert alert-light border rounded-3 small mt-3 mb-0">
+                            <i class="bi bi-info-circle text-primary me-1"></i>
+                            Use at least 8 characters, avoiding common passwords and personal information.
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 px-3 px-md-4 pb-3 pt-1">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-key me-1"></i>Update Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

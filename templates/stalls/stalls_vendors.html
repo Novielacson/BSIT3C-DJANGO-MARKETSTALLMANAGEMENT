@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .th-label { font-size: .72rem; letter-spacing: .06em; }
+    .minw-0 { min-width: 0; }
+    .avatar-initial { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 600; flex-shrink: 0; }
+    .stall-table tbody tr { transition: background-color .15s ease-in-out; }
+    .stall-table tbody tr:hover { background-color: rgba(13, 110, 253, .04); }
+    .stall-table tbody tr:last-child td { border-bottom: 0; }
+    .status-tab .tab-count { font-size: .7rem; }
+</style>
+
+<div class="container-fluid py-3">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Stalls & Vendors Management</h1>
+            <p class="text-secondary mb-0">Manage registered market stalls, vendors, and assignments</p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button type="submit" form="delete-form" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete the selected stalls?');">
+                <i class="bi bi-trash3 me-1"></i> Delete Selected
+            </button>
+            <a href="{% url 'stalls:add_stall' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Add New Stall & Vendor
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center gap-2 mb-2" role="alert">
+                    <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'warning' %}exclamation-triangle-fill{% elif message.tags == 'error' %}exclamation-octagon-fill{% else %}info-circle-fill{% endif %}"></i>
+                    <div class="minw-0">{{ message }}</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-transparent border-0 pt-3 px-3 pb-2">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0">Registered Stalls</h5>
+                    <p class="text-secondary small mb-0">Showing <span id="visible-count">{{ stalls|length }}</span> of {{ stalls|length }} stall{{ stalls|length|pluralize }} &middot; <span id="selection-count">0</span> selected</p>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <select id="category-filter" class="form-select form-select-sm w-auto" aria-label="Filter by category">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                    <form method="get" action="{% url 'stalls:stalls_vendors' %}" class="d-flex gap-2" role="search">
+                        <div class="input-group input-group-sm" style="max-width: 260px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-secondary"></i></span>
+                            <input type="text" name="q" value="{{ request.GET.q }}" class="form-control border-start-0" placeholder="Search stall or vendor...">
+                        </div>
+                        {% if request.GET.q %}
+                            <a href="{% url 'stalls:stalls_vendors' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i> Clear</a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            <ul class="nav nav-pills gap-1 flex-wrap" id="status-tabs">
+                <li class="nav-item">
+                    <button type="button" class="nav-link active px-3 py-1 status-tab" data-status="all">
+                        <i class="bi bi-list-ul me-1"></i>All <span class="badge rounded-pill bg-light text-dark border ms-1 tab-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button type="button" class="nav-link px-3 py-1 status-tab" data-status="Paid">
+                        <i class="bi bi-check-circle me-1"></i>Paid <span class="badge rounded-pill bg-light text-dark border ms-1 tab-count">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button type="button" class="nav-link px-3 py-1 status-tab" data-status="Overdue">
+                        <i class="bi bi-exclamation-circle me-1"></i>Overdue <span class="badge rounded-pill bg-light text-dark border ms-1 tab-count">0</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-2 p-md-3">
+            <form id="delete-form" method="POST" action="{% url 'stalls:delete_multiple_stalls' %}">
+                {% csrf_token %}
+                <div class="table-responsive border rounded-3">
+                    <table class="table align-middle stall-table mb-0" id="stall-table">
+                        <thead>
+                            <tr class="text-secondary text-uppercase">
+                                <th class="ps-3 th-label fw-semibold" style="width: 40px;">
+                                    <input type="checkbox" id="selectAll" class="form-check-input mt-0" aria-label="Select all stalls">
+                                </th>
+                                <th class="th-label fw-semibold">Stall Number</th>
+                                <th class="th-label fw-semibold">Assigned Vendor</th>
+                                <th class="th-label fw-semibold">Contact Number</th>
+                                <th class="th-label fw-semibold">Category</th>
+                                <th class="th-label text-end fw-semibold">Rent Rate</th>
+                                <th class="th-label fw-semibold">Date Paid</th>
+                                <th class="th-label fw-semibold">Status</th>
+                                <th class="th-label fw-semibold">Due Date</th>
+                                <th class="pe-3 text-end th-label fw-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stall in stalls %}
+                            <tr data-status="{{ stall.payment_status }}" data-category="{{ stall.category|default:'General' }}">
+                                <td class="ps-3">
+                                    <input type="checkbox" name="selected_stalls" value="{{ stall.id }}" class="form-check-input mt-0 stall-checkbox" aria-label="Select stall {{ stall.stall_number }}">
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border rounded-3 fw-semibold px-2 py-2">#{{ stall.stall_number }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if stall.vendor_name %}
+                                            <span class="avatar-initial bg-primary-subtle text-primary-emphasis">{{ stall.vendor_name|slice:":1"|upper }}</span>
+                                            <span class="fw-medium">{{ stall.vendor_name }}</span>
+                                        {% else %}
+                                            <span class="avatar-initial bg-light text-secondary"><i class="bi bi-person"></i></span>
+                                            <span class="text-secondary fst-italic">Unassigned</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-secondary">
+                                    {% if stall.contact_number %}
+                                        <i class="bi bi-telephone me-1"></i>{{ stall.contact_number }}
+                                    {% else %}
+                                        <span class="fst-italic">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-secondary">{{ stall.category|default:"General" }}</td>
+                                <td class="fw-semibold text-end">₱{{ stall.rent_rate|default:"0.00"|floatformat:2 }}</td>
+                                <td class="text-secondary">
+                                    {% if stall.date_paid %}
+                                        {{ stall.date_paid|date:"M. d, Y" }}
+                                    {% else %}
+                                        <span class="fst-italic">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if stall.payment_status == 'Paid' %}
+                                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis px-3 py-2"><i class="bi bi-check-circle me-1"></i>Paid</span>
+                                    {% elif stall.payment_status == 'Overdue' %}
+                                        <span class="badge rounded-pill bg-danger-subtle text-danger px-3 py-2"><i class="bi bi-exclamation-circle me-1"></i>Overdue</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-2"><i class="bi bi-clock me-1"></i>Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if stall.next_due_date %}
+                                        {% if stall.payment_status == 'Overdue' %}
+                                            <span class="text-danger fw-semibold"><i class="bi bi-calendar-x me-1"></i>{{ stall.next_due_date|date:"M. d, Y" }}</span>
+                                        {% else %}
+                                            <span class="text-secondary"><i class="bi bi-calendar-event me-1"></i>{{ stall.next_due_date|date:"M. d, Y" }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-secondary fst-italic">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <a href="{% url 'stalls:stall_detail' stall.pk %}" class="btn btn-sm btn-light border" title="View details" aria-label="View details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{% url 'stalls:edit_stall' stall.pk %}" class="btn btn-sm btn-light border" title="Edit stall" aria-label="Edit stall">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="10" class="text-center py-5">
+                                    <i class="bi bi-inbox text-secondary display-5 d-block mb-2"></i>
+                                    <div class="fw-semibold mb-1">No stall records found</div>
+                                    {% if request.GET.q %}
+                                        <div class="text-secondary small mb-3">No results for &ldquo;{{ request.GET.q }}&rdquo;. Try a different search.</div>
+                                        <a href="{% url 'stalls:stalls_vendors' %}" class="btn btn-sm btn-outline-primary">Clear search</a>
+                                    {% else %}
+                                        <div class="text-secondary small mb-3">Get started by registering your first stall and vendor.</div>
+                                        <a href="{% url 'stalls:add_stall' %}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i> Add New Stall & Vendor</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if stalls %}
+                            <tr id="no-match-row" hidden>
+                                <td colspan="10" class="text-center py-5">
+                                    <i class="bi bi-funnel text-secondary display-6 d-block mb-2"></i>
+                                    <div class="fw-semibold mb-1">No stalls match the current filters</div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="reset-filters">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset filters
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const selectAll = document.getElementById('selectAll');
+    const stallRows = Array.from(document.querySelectorAll('#stall-table tbody tr[data-status]'));
+    const statusTabs = Array.from(document.querySelectorAll('.status-tab'));
+    const categorySelect = document.getElementById('category-filter');
+    const selectionCountEl = document.getElementById('selection-count');
+    const visibleCountEl = document.getElementById('visible-count');
+    const noMatchRow = document.getElementById('no-match-row');
+
+    function updateSelectionCount() {
+        if (selectionCountEl) {
+            selectionCountEl.textContent = document.querySelectorAll('.stall-checkbox:checked').length;
+        }
+    }
+
+    function currentStatus() {
+        const active = statusTabs.find(tab => tab.classList.contains('active'));
+        return active ? active.dataset.status : 'all';
+    }
+
+    function applyFilters() {
+        const status = currentStatus();
+        const category = categorySelect ? categorySelect.value : '';
+        let visible = 0;
+        stallRows.forEach(row => {
+            const match = (status === 'all' || row.dataset.status === status)
+                && (!category || row.dataset.category === category);
+            row.hidden = !match;
+            if (match) visible++;
+        });
+        if (visibleCountEl) visibleCountEl.textContent = visible;
+        if (noMatchRow) noMatchRow.hidden = visible !== 0;
+    }
+
+    function updateTabCounts() {
+        const counts = { all: stallRows.length, Paid: 0, Overdue: 0 };
+        stallRows.forEach(row => {
+            if (row.dataset.status in counts) counts[row.dataset.status]++;
+        });
+        statusTabs.forEach(tab => {
+            const badge = tab.querySelector('.tab-count');
+            if (badge) badge.textContent = counts[tab.dataset.status] || 0;
+        });
+    }
+
+    statusTabs.forEach(tab => tab.addEventListener('click', () => {
+        statusTabs.forEach(t => t.classList.toggle('active', t === tab));
+        applyFilters();
+    }));
+
+    categorySelect?.addEventListener('change', applyFilters);
+
+    document.getElementById('reset-filters')?.addEventListener('click', () => {
+        if (categorySelect) categorySelect.value = '';
+        statusTabs.forEach(t => t.classList.toggle('active', t.dataset.status === 'all'));
+        applyFilters();
+    });
+
+    selectAll?.addEventListener('change', function () {
+        stallRows.forEach(row => {
+            if (row.hidden) return;
+            const checkbox = row.querySelector('.stall-checkbox');
+            if (checkbox) checkbox.checked = this.checked;
+        });
+        updateSelectionCount();
+    });
+
+    stallRows.forEach(row => {
+        const checkbox = row.querySelector('.stall-checkbox');
+        if (checkbox) checkbox.addEventListener('change', updateSelectionCount);
+    });
+
+    updateTabCounts();
+    applyFilters();
+    updateSelectionCount();
+</script>
+{% endblock %}

@@ -1,0 +1,11 @@
+<div class="stall-card {{ class }} {% if stall.vendor_name %}occupied{% else %}vacant{% endif %}"
+     {% if stall %}data-bs-toggle="modal" data-bs-target="#stallModal{{ stall.id }}"{% endif %}>
+  <div class="fw-bold">#{{ num }}</div>
+  <div class="tiny-text text-truncate">
+    {% if stall.vendor_name %}
+      {{ stall.vendor_name }}
+    {% else %}
+      <span class="text-muted">Vacant</span>
+    {% endif %}
+  </div>
+</div>
